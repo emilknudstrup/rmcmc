@@ -42,7 +42,7 @@ else:
 ### Example: Target from a CSV file 
 CSV file should have a format like this with column names corresponding to the parameter name in the Target class
 
-| #        |               | d      | BJD          | Rs   |      | km/s  | Rs    |
+| #        | .             | d      | BJD          | Rs   | .    | km/s  | Rs    |
 | name     | host          | per    | T0           | a    | b    | vsini | rp    |
 | -------- | --------------| ------ | ------------ | ---- | ---- | ----- | ----- |
 | TOI-150b | TYC 9191-519-1| 5.8574 | 2458326.2773 | 9.92 | 0.33 | 7.96  | 0.083 |
