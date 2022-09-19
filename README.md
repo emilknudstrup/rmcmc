@@ -78,3 +78,5 @@ else:
 
 
 ```
+This should look something like this:
+![TOI-677b_MC_KDE](https://user-images.githubusercontent.com/50403597/191103313-e48a7c02-452c-42f2-a3d1-a510d3cb05ca.png)
