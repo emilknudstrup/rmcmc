@@ -9,12 +9,13 @@ from statsmodels.nonparametric.kde import KDEUnivariate as KDE
 
 ## function to plot a KDE from the distributions
 def plotKDE(results,colors=[],qs=[16,84],
-            font=12,alpha=0.5,**kwargs):
+            font=12,alpha=0.5,path='./name',save=1,usetex=False,
+            **kwargs):
     '''Plot a KDE from the distributions.'''
     if not len(colors):
         colors = ['C{}'.format(ii) for ii in range(9)]
 
-
+    plt.rc('text',usetex=usetex)
     fig = plt.figure()
     ax1 = fig.add_subplot(211)
     ax2 = fig.add_subplot(413,sharex=ax1)
@@ -31,7 +32,7 @@ def plotKDE(results,colors=[],qs=[16,84],
         ldict = results[key]
         sols = ldict['distribution']
         kde = KDE(sols)
-        kde.fit(kernel='gau', bw='scott', fft=True, gridsize=1000)
+        kde.fit()#kernel='gau', bw='scott', fft=True, gridsize=1000)
         ks = kde.support
         kd = kde.density/np.max(kde.density)
         
@@ -50,6 +51,8 @@ def plotKDE(results,colors=[],qs=[16,84],
         marr = ldict['model']
         xmin, xmax = min(marr[:,0]), max(marr[:,0])
         ax1.plot(marr[:,0],marr[:,1],color=colors[ii],lw=3)
+        #print(nlam,up,low)
+        #if ii: ax3.plot(sols,np.zeros(len(sols)),marker='|',color='k',ls='none')
         
         if not ii:
             ax1.errorbar(times,rvs,yerr=errs,fmt='.',color='k',zorder=10)
@@ -93,6 +96,8 @@ def plotKDE(results,colors=[],qs=[16,84],
     
     plt.setp(ax2.get_xticklabels(), visible=False)
     plt.subplots_adjust(hspace=0.08)
+    #plt.savefig(path+'_MC_KDE.pdf')
+    plt.savefig(path+'_MC_KDE.png',bbox_inches='tight',dpi=500)
     #ax.hist(data,bins=100,density=True,alpha=0.5,label='data')
     #ax.legend()
     #return ax

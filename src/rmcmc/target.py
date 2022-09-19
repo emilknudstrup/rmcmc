@@ -9,19 +9,20 @@ class Target(object):
     Class to represent orbital/system parameters.
 
     Attributes:
-        per (float): Period.
-        T0 (float): Reference time (mid-transit time).
-        rp (float): Planet radius.
-        a (float): Semi-major axis.
-        b (float): Impact parameter.
+        per (float): Period (days).
+        T0 (float): Reference time (mid-transit time) (BJD).
+        rp (float): Planet radius (Stellar radii).
+        a (float): Semi-major axis (Stellar radii).
+        b (float): Impact parameter (Stellar radii).
         ecc (float): Eccentricity.
-        w (float): Argument of periastron.
-        vsini (float): Rotational velocity.
-        inc (float): Inclination.
-        zeta (float): Macro-turbulence.
-        xi (float): Micro-turbulence.
-        lam (float): Projected obliquity.
-        RVsys (float): Systemic radial velocity.
+        w (float): Argument of periastron (degrees).
+        vsini (float): Rotational velocity (km/s).
+        inc (float): Inclination (degrees).
+        zeta (float): Macro-turbulence (km/s).
+        xi (float): Micro-turbulence (km/s).
+        lam (float): Projected obliquity (degrees).
+        RVsys (float): Systemic radial velocity (m/s).
+        K (float): Semi-amplitude (m/s).
         c1 (float): Linear limb-darkening coefficient.
         c2 (float): Quadratic limb-darkening coefficient.
         name (str): Name of the target.

@@ -13,24 +13,25 @@ Rossiter-McLaughlin Monte Carlo simulation
 `pip install -r requirements.txt`
 
 
-### Example: Manual create target
+### Example: Manually create target
 ```python
 import rmcmc
 
 ## Instantiate target
-target = rmcmc.target.Target(per=18.71205, T0=2458729.681, rp=0.0690 , 
-							 a=24.3, b=0.14, ecc=0.0, w=90.0,vsini=5.64,
-							 name='TOI-1456')
+target = rmcmc.target.Target(per=18.71205, T0=2458729.681, rp=0.0690, 
+			     a=24.3, b=0.14, ecc=0.0, w=90.0, vsini=5.64,
+			     name='TOI-1456')
 
-## Instantiate the Simulator with 330 draws, precision of 1 m/s, and 3 CPUs (multiprocessing)
+## Instantiate the Simulator with 300 draws, precision of 1 m/s, and 3 CPUs (multiprocessing)
 run = rmcmc.fakit.Simulator(target,ndraws=300,precision=1,nproc=3)
 ## Simulate some data with an exposure time of 180 s
 run.dataSimulator(exposure=180)
 
 ## Save results or not
 save = 0
-## 
-run.MC([0.0,10],writeBinary=save)
+##
+lams = [0.0,10.] # lambda values to test
+run.MC(lams,writeBinary=save)
 if save:
 	results = rmcmc.fakit.readBinary('TOI-1456.pkl')
 	rmcmc.makit.plotKDE(results)
@@ -56,22 +57,24 @@ file = '/home/emil/Desktop/PhD/targets/warm.csv'
 ## Instantiate target
 target = rmcmc.target.Target()
 ## Grab and set parameters for your planet name in CSV file
-target.fromCSV(file,'K2-232b',skiprows=2)
+target.fromCSV(file,'TOI-677b',skiprows=2)
 
-## Instantiate the Simulator with 330 draws, precision of 1 m/s, and 3 CPUs (multiprocessing)
-run = rmcmc.fakit.Simulator(target,ndraws=300,precision=1,nproc=3)
-## Simulate some data with an exposure time of 180 s
-run.dataSimulator(exposure=180)
+## Instantiate the Simulator with 400 draws, precision of 5 m/s, and 3 CPUs (multiprocessing)
+run = rmcmc.fakit.Simulator(target,ndraws=400,precision=5,nproc=3)
+
+## Simulate some data with an exposure time of 360 s
+run.dataSimulator(exposure=360)
 
 ## Save results or not
 save = 0
-## 
-run.MC([0.0,10],writeBinary=save)
+## Run the MC
+lams = [0.,10.]#Lambdas to test
+run.MC(lams,writeBinary=save)
 if save:
-	results = rmcmc.fakit.readBinary('K2-232b.pkl')
+	results = rmcmc.fakit.readBinary('TOI-677b.pkl')
 	rmcmc.makit.plotKDE(results)
 else:
-	rmcmc.makit.plotKDE(run.results)
+	rmcmc.makit.plotKDE(run.results,usetex=True,path='./TOI-677b')#path to plot, name './TOI-677b_MC_KDE.png'
 
 
 ```
