@@ -50,6 +50,7 @@ CSV file should have a format like this with column names corresponding to the p
 | K2-232b  | HD 286123     | 11.168 | 2458326.2773 | 17.1 | 0.59 | 5.15  | 0.091 |
 
 ```python
+
 import rmcmc
 
 ## Path to CSV file
@@ -67,19 +68,18 @@ run.dataSimulator(exposure=360)
 
 ## Save results or not
 save = 0
-## Run the MC
-lams = [0.,10.]#Lambdas to test
-run.MC(lams,writeBinary=save)
 if save:
 	results = rmcmc.fakit.readBinary('TOI-677b.pkl')
 	rmcmc.makit.plotKDE(results)
 else:
+	## Run the MC
+	lams = [0.,10.]#Lambdas to test
+	run.MC(lams,writeBinary=save)
 	rmcmc.makit.plotKDE(run.results,usetex=True,path='./TOI-677b')#path to plot, name './TOI-677b_MC_KDE.png'
-
 
 ```
 This should look something like this:
-![TOI-677b_MC_KDE](https://user-images.githubusercontent.com/50403597/191103313-e48a7c02-452c-42f2-a3d1-a510d3cb05ca.png)
+![TOI-677b_MC_KDE](https://user-images.githubusercontent.com/50403597/191275099-e2f223a3-74df-4585-8842-a9c3bc5fe78e.png)
 
 ### Example: Target and exposure time/precision from a CSV file 
 

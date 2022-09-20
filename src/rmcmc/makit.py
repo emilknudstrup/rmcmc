@@ -42,10 +42,6 @@ def plotKDE(results,colors=[],qs=[16,84],
         lowerBounds.append(low)
         upperBounds.append(up)
             
-        arr = ldict['observations']
-        times = arr[:,0]
-        rvs = arr[:,1]
-        errs = arr[:,2]
         
         
         marr = ldict['model']
@@ -55,8 +51,12 @@ def plotKDE(results,colors=[],qs=[16,84],
         #if ii: ax3.plot(sols,np.zeros(len(sols)),marker='|',color='k',ls='none')
         
         if not ii:
+            arr = ldict['observations']
+            times = arr[:,0]
+            rvs = arr[:,1]
+            errs = arr[:,2]
             ax1.errorbar(times,rvs,yerr=errs,fmt='.',color='k',zorder=10)
-            subtract = ldict['subtract']
+            #subtract = ldict['subtract']
 
             lam_low_calc = nlam - low
             lam_up_calc = up - nlam
@@ -67,6 +67,7 @@ def plotKDE(results,colors=[],qs=[16,84],
             transform = ax1.transAxes,
             bbox=dict(boxstyle="round", fc="white", ec="black", pad=0.2),zorder=15) 
             
+        subtract = ldict['subtract']
         ax2.errorbar(times,rvs-subtract,yerr=errs,fmt='.',color=colors[ii],zorder=10)
         
         ax3.plot(ks,kd,label=key,**kwargs)
