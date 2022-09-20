@@ -94,7 +94,7 @@ class Simulator(object):
 
 	## function to simulate time series with sampling of exposure time
 	#def timeSimulator(self,target,exposure=900,start=1800,end=1800):
-	def timeSimulator(self,exposure=900,start=1800,end=1800):
+	def timeSimulator(self,exposure=900,start=1800,end=1800,overhead=50):
 		#p, rp, ar, inc, ecc, ww = target.per, target.rp, target.a, target.inc, target.ecc, target.w
 		p, rp, ar, b, ecc, ww = self.target.per, self.target.rp, self.target.a, self.target.b, self.target.ecc, self.target.w
 		#inc *= np.pi/180.0
@@ -103,6 +103,8 @@ class Simulator(object):
 		duration = totalDuration(p,rp,ar,inc,ecc,ww)
 		half = 0.5*duration
 		T0 = self.target.T0
+
+		exposure += overhead
 
 		exposure /= 24*3600
 		start /= 24*3600
@@ -250,12 +252,6 @@ class Simulator(object):
 			marr = np.zeros(shape=(len(self.mtimes),2))
 			marr[:,0] = time2phase(self.mtimes,self.target.per,self.target.T0)*self.target.per*24
 			marr[:,1] = self.mRVs
-			
-			import matplotlib.pyplot as plt
-			fig = plt.figure()
-			ax = fig.add_subplot(111)
-			ax.plot(time2phase(self.times,self.target.per,self.target.T0)*self.target.per*24,self.rvs)
-			ax.plot(time2phase(self.mtimes,self.target.per,self.target.T0)*self.target.per*24,self.mRVs)
 			
 			self.results[lam] = {
 				'distribution':self.sols,

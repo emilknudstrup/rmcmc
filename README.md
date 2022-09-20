@@ -80,3 +80,58 @@ else:
 ```
 This should look something like this:
 ![TOI-677b_MC_KDE](https://user-images.githubusercontent.com/50403597/191103313-e48a7c02-452c-42f2-a3d1-a510d3cb05ca.png)
+
+### Example: Target and exposure time/precision from a CSV file 
+
+
+| name     | exp   | precision | jitter |
+| -------- | ----- | --------  | ------ |
+| WASP-24b | 450   | 1.25      | 3.0    |
+| ...      | ...   | ...       | ...    |
+| WASP-54b | 450   | 0.83      | 2.0    |
+
+```python
+
+import pandas as pd
+import rmcmc
+import os
+
+## Path to CSV file
+file = '/home/emil/Desktop/PhD/targets/1deg.csv'
+## Instantiate target
+target = rmcmc.target.Target()
+## Grab and set parameters for your planet name in CSV file
+name = 'WASP-24b'
+path = './mc/'
+try:
+	os.mkdir(path)
+except FileExistsError:
+	pass
+
+target.fromCSV(file,name,skiprows=2)
+
+## Read file with target, exposure time, precision, and jitter
+obsfile = pd.read_csv('targets_exposure.csv',skiprows=1)
+df = obsfile[obsfile['name'] == name]
+prec, jitt = df['precision'][0], df['jitter'][0]
+exp = df['exp'][0]
+## Instantiate the Simulator with 400 draws, precision of prec m/s, jitter of jitt m/s, and 3 CPUs (multiprocessing)
+run = rmcmc.fakit.Simulator(target,ndraws=400,precision=prec,jitter=jitt,nproc=3)
+
+## Simulate some data with an exposure time of exp s
+run.dataSimulator(exposure=exp)
+
+## Save results or not
+save = 0
+if save:
+	## Lambdas to test
+	lams = [0.,10.]
+	## Run the MC
+	run.MC(lams,writeBinary=save,path=path)
+	rmcmc.makit.plotKDE(run.results)
+else:
+	results = rmcmc.fakit.readBinary(path+name+'.pkl')
+	rmcmc.makit.plotKDE(results,usetex=True,path=path+name)#path to plot 'pathname_MC_KDE.png'
+
+
+```
