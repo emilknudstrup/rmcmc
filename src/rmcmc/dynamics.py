@@ -108,7 +108,6 @@ def projDist(cos_f,sin_f,ww,inc,ar,ecc):
 	Function that returns the separation of the centers of the two orbiting objects.
 	The approach follows :cite:t:`Kreidberg2015`.
 
-
 	:param cos_f: cosine of the true anomaly
 	:type cos_f: array
 	:param sin_f: sine of the true anomaly
@@ -125,7 +124,6 @@ def projDist(cos_f,sin_f,ww,inc,ar,ecc):
 	:return: separation of centers.
 	:rtype: array
 
-
 	'''
 
 	nn = len(cos_f)
@@ -134,7 +132,7 @@ def projDist(cos_f,sin_f,ww,inc,ar,ecc):
 		## Huge value for separation to make sure not to model planet passing behind star
 		## NOTE: Expressions like sin(w + f) are expanded to stay clear of arctan
 		if np.sin(inc)*(np.sin(ww)*cos_f[ii] + np.cos(ww)*sin_f[ii]) <= 0:
-		  sep[ii] = 1000.
+			sep[ii] = 1000.
 		else:
 			nom = ar*(1.0 - ecc**2)
 			nom *= np.sqrt(1.0 - (np.sin(ww)*cos_f[ii] + np.cos(ww)*sin_f[ii])**2*np.sin(inc)**2)
@@ -273,7 +271,8 @@ def getRM(cos_f,sin_f,ww,ecc,ar,inc,rp,c1,c2,lam,vsini,
 # Radial velocity curve 
 # =============================================================================
 
-def getRV(time, per, T0, ecc, w, K, RVsys, a, Rp, b, vsini, lam, 
+def getRV(time, per, T0, ecc, w, K, RVsys, 
+	a=10., Rp=0.1, b=0.1, vsini=3.0, lam=0.0, 
 	c1=0.3, c2=0.2, zeta=1.0, xi=2.0,  RM=False,mpath=None):
 	'''The radial velocity curve
 
