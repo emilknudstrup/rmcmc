@@ -9,7 +9,7 @@ import scipy.optimize as so
 # =============================================================================
 # Keplerian motion 
 # =============================================================================
-def solveKeplersEq(mean_anomaly, ecc, tolerance=1.e-5,sci=True):
+def solveKeplersEq(mean_anomaly, ecc, tolerance=1.48e-8, iter_max=300, sci=True):
 	'''Solves Kepler's equation.
 
 	Function that solves Kepler's equation:
@@ -25,12 +25,13 @@ def solveKeplersEq(mean_anomaly, ecc, tolerance=1.e-5,sci=True):
 	:type ecc: float
 	:param tolerance: The tolerance for convergene. Defaults to 1.e-5.
 	:type tolerance: float, optional
-	:param sci: Whether to use scipy to solve Kepler's Eq. More stable. Default ``True''.
+	:param iter_max: Maximum number of iterations. Defaults to 300.
+	:type iter_max: int, optional
+	:param sci: Use the scipy implementation of the Newton-Raphson method. Defaults to True.
 	:type sci: bool, optional
-
+	
 	:return: The new eccentric anomaly.
 	:rtype: array 
-
 
 	'''
 
