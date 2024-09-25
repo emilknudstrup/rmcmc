@@ -147,6 +147,61 @@ def tgaussPrior(val,xmid,xwid,xmin,xmax):
 		ret = nom/(den1 - den2)
 	return ret
 
+def total_duration(per,rp,ar,inc,ecc=0.0,ww=np.deg2rad(90)):
+	'''The total duration of the transit, i.e., :math:`T_{41}`.
+
+	This is the time from the first to the last contact point.
+
+	:param per: Orbital period.
+	:type per: float
+	:param rp: Planet-to-star radius ratio.
+	:type rp: float
+	:param ar: Semi-major axis in stellar radii.
+	:type ar: float
+	:param inc: Inclination in radians.
+	:type inc: float
+	:param ecc: Eccentricity.
+	:type ecc: float
+	:param ww: Argument of periastron in radians.
+	:type ww: float
+
+	:return: the total duration of the transit
+	:rtype: float
+
+	.. note::
+		The output will have the same units as the orbital period.
+
+
+	'''
+	b = ar*np.cos(inc)*(1 - ecc**2)/(1 + ecc*np.sin(ww))
+	nom = np.arcsin( np.sqrt( ((1 + rp)**2 - b**2))/(np.sin(inc)*ar)  )*np.sqrt(1 - ecc**2)
+	den = (1 + ecc*np.sin(ww))
+	t41 = per/np.pi * nom/den
+	return t41
+
+def Nexp(exp,per,rp,ar,b,ecc=0.0,ww=np.deg2rad(90)):
+	'''Number of exposures.
+
+	'''
+	inc = np.arccos(b/ar)
+	t41 = total_duration(per,rp,ar,inc,ecc,ww)
+	## exp from seconds to days
+	exp /= 24*3600
+	return int(t41/exp)
+
+def lamPrec(sigmav,vsini,N,rp,b,lam):
+	'''Theoretical precision on the projected obliquity.
+
+
+	'''
+	vsini *= 1000
+	front = sigmav/(np.sqrt(N)*vsini*rp**2)
+	den = (1-np.power(b,2))*np.power(np.cos(lam),2) + 3*np.power(b,2)*np.power(np.sin(lam),2)
+	nom = np.power(b,2)*(1-np.power(b,2))
+	back = np.sqrt(den/nom)
+
+	return np.rad2deg(front*back)
+
 class Simulator(object):
 	
 	parameters = ['per','T0','ecc','w','K','RVsys','a',
@@ -155,17 +210,20 @@ class Simulator(object):
 	def __init__(self,target,
 				ndraws=500,nproc=1,
 				times=np.array([]),
+				error=np.array([]),
 				precision=5,jitter=0.0,
 				variables=['vsini','b']):
 		self.target = target
 		self.ndraws = ndraws
 		self.times = times
+		self.error = error
 		self.precision = precision
 		self.jitter = jitter
 		self.uncertainty = np.sqrt(self.precision**2 + self.jitter**2)
 		self.variables = variables
 		self.nproc = nproc
-			
+
+
 	#def model(self,target,RM=True,mpath=None,mtimes=np.array([])):
 	def model(self,RM=True,mpath=None,mtimes=np.array([])):
 
@@ -201,13 +259,15 @@ class Simulator(object):
 
 	## function to simulate time series with sampling of exposure time
 	#def timeSimulator(self,target,exposure=900,start=1800,end=1800):
-	def timeSimulator(self,exposure=900,start=1800,end=1800,overhead=50):
+	def timeSimulator(self,exposure=900,start=1800,end=1800,overhead=50,duration=None):
 		#p, rp, ar, inc, ecc, ww = target.per, target.rp, target.a, target.inc, target.ecc, target.w
-		p, rp, ar, b, ecc, ww = self.target.per, self.target.rp, self.target.a, self.target.b, self.target.ecc, self.target.w
-		#inc *= np.pi/180.0
-		inc = np.arccos(b/ar)
-		ww = np.deg2rad(ww)
-		duration = totalDuration(p,rp,ar,inc,ecc,ww)
+		if duration == None:
+			p, rp, ar, b, ecc, ww = self.target.per, self.target.rp, self.target.a, self.target.b, self.target.ecc, self.target.w
+			#inc *= np.pi/180.0
+			inc = np.arccos(b/ar)
+			ww = np.deg2rad(ww)
+			duration = totalDuration(p,rp,ar,inc,ecc,ww)
+		
 		half = 0.5*duration
 		T0 = self.target.T0
 
@@ -223,24 +283,30 @@ class Simulator(object):
 		self.times = np.arange(T0-half-start,T0+half+end,exposure)
 
 	def noiseSimulator(self):
-		return np.random.normal(loc=0.0,scale=self.uncertainty,size=len(self.times))
+		return np.random.normal(loc=0.0,scale=self.error,size=len(self.times))
 	
 	#def dataSimulator(self,target,**kwargs):
 	def dataSimulator(self,**kwargs):
 		if not len(self.times):
 			self.timeSimulator(**kwargs)
+		if not len(self.error):
+			self.error = np.ones(len(self.times))*self.uncertainty
 		rvs = self.model()
 		rvs += self.noiseSimulator()
 		
 		self.rvs = rvs
-		self.error = np.ones(len(self.rvs))*self.uncertainty
 		
 	
 	def modelSimulator(self):
 		if not len(self.times):
 			self.timeSimulator()
-			
-		self.mtimes = np.linspace(min(self.times)-0.005,max(self.times)+0.006,300)
+		
+		# xval = max(abs(min(self.times)),max(self.times))
+		# xmin = -xval
+		# xmax = xval
+		# self.mtimes = np.linspace(xmin-0.005,xmax+0.006,300)
+		# self.mtimes = np.linspace(min(self.times)-0.005,max(self.times)+0.006,300)
+		self.mtimes = np.linspace(min(self.times)-0.01,max(self.times)+0.006,300)
 		self.mRVs = self.model(mtimes=self.mtimes)
 	
 
@@ -310,8 +376,9 @@ class Simulator(object):
 		#self.target.lam = lam
 		self.simulated = self.model() + self.noiseSimulator()
 		#func = lambda ll : self.logLike(ll,per,T0,ecc,w,K,RVsys,a,Rp,b,vsini,c1,c2,zeta,xi,RM=RM,mpath=mpath)
-		guess = self.flatPriorDis(np.random.uniform(),lam-30.,lam+30.)
+		guess = self.flatPriorDis(np.random.uniform(),lam-50.,lam+50.)
 		#res = sop.minimize(func,guess,method='Nelder-Mead',tol=1e-6,bounds=[(-180,180)])
+		# res = sop.minimize(self.logLike,guess,method='L-BFGS-B',tol=1e-6,bounds=[(-180,180)],
 		res = sop.minimize(self.logLike,guess,method='Nelder-Mead',tol=1e-6,bounds=[(-180,180)],
 			args=(per,T0,ecc,w,K,RVsys,a,Rp,b,vsini,c1,c2,zeta,xi,RM,mpath))
 		return res.x

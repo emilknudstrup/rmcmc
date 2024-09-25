@@ -10,7 +10,7 @@ import corner
 ## function to plot a KDE from the distributions
 def plotKDE(results,colors=[],qs=[16,84],
 			font=12,alpha=0.5,path='./name',save=1,
-			usetex=False,figsize=(6.4,4.8),
+			usetex=False,figsize=(6.4,4.8),all_kdes=True,
 			**kwargs):
 	'''Plot a KDE from the distributions.'''
 	if not len(colors):
@@ -32,9 +32,9 @@ def plotKDE(results,colors=[],qs=[16,84],
 	for ii, key in enumerate(results.keys()):
 		ldict = results[key]
 		sols = np.array(list(ldict['distribution']))
-		#keep = np.percentile(sols,[1,99])
+		# keep = np.percentile(sols,[3,97])
 		#print(keep)
-		#sols = sols[(sols > keep[0]) & (sols < keep[1])]
+		# sols = sols[(sols > keep[0]) & (sols < keep[1])]
 		#print(sols)
 		#sols = sols[(sols < 15)]# & (sols < keep[1])]
 		kde = KDE(sols)
@@ -46,13 +46,24 @@ def plotKDE(results,colors=[],qs=[16,84],
 		nlam = np.median(sols)
 		vals = np.percentile(sols,qs)
 		low, up = vals[0],vals[1]
+		
+		lam_low_calc = nlam - low
+		lam_up_calc = up - nlam
+		std = np.mean([lam_low_calc,lam_up_calc])
+		low = nlam - std
+		up = nlam + std
+
+		nlam = ks[np.argmax(kd)]
+		# low = nlam - np.std(sols)
+		# up = nlam + np.std(sols)
+		
+
 		lowerBounds.append(low)
 		upperBounds.append(up)
 			
 		
 		
 		marr = ldict['model']
-		xmin, xmax = min(marr[:,0]), max(marr[:,0])
 		ax1.plot(marr[:,0],marr[:,1],color=colors[ii],lw=3,label=r'$\lambda = {:0.1f}^\circ$'.format(key))
 		#print(nlam,up,low)
 		#if ii: ax3.plot(sols,np.zeros(len(sols)),marker='|',color='k',ls='none')
@@ -63,10 +74,27 @@ def plotKDE(results,colors=[],qs=[16,84],
 			rvs = arr[:,1]
 			errs = arr[:,2]
 			ax1.errorbar(times,rvs,yerr=errs,fmt='.',color='k',zorder=10)
+			# ax1.errorbar(times,rvs,yerr=errs,fmt='o',mec='k',mfc='w',zorder=10)
+			# try:
+			# 	arr2 = ldict['maroon']
+			# 	# print('adad')
+			# 	times2 = arr2[:,0]
+			# 	# r2 = #arr2[:,1]
+			# 	idxs = []#np.where(run.times == times2)[0]
+			# 	for t2 in times2:
+			# 		idx = np.where(times == t2)[0][0]
+			# 		idxs.append(idx)
+			# 	idxs = np.asarray(idxs)
+			# 	r2 = rvs[idxs]
+			# 	e2 = arr2[:,2]
+			# 	ax1.errorbar(times2,r2,yerr=e2,fmt='s',mec='k',mfc='w',zorder=10)
+			# except KeyError:
+			# 	print('adad2132')
+			# 	pass
 			#subtract = ldict['subtract']
 
-			lam_low_calc = nlam - low
-			lam_up_calc = up - nlam
+			# lam_low_calc = nlam - low
+			# lam_up_calc = up - nlam
 			unc_label = r'$\sigma (\lambda) = {:0.1f}^\circ$'.format(np.mean([lam_low_calc,lam_up_calc]))
 			ax1.text(0.1,0.1,unc_label,fontsize=font*0.9,
 			horizontalalignment='center',
@@ -76,9 +104,14 @@ def plotKDE(results,colors=[],qs=[16,84],
 			
 		subtract = ldict['subtract']
 		ax2.errorbar(times,rvs-subtract,yerr=errs,fmt='.',color=colors[ii],zorder=10)
+		# ax2.errorbar(times,rvs-subtract,yerr=errs,fmt='o',mec='k',mfc=colors[ii],zorder=10)
+		# ax2.errorbar(times[idxs],rvs[idxs]-subtract[idxs],yerr=e2,fmt='s',mec='k',mfc=colors[ii],zorder=10)
 		
+		if ii:
+			if not all_kdes:
+				continue
 		ax3.plot(ks,kd,label=key,**kwargs)
-		shade = (ks > low) & (ks < up)
+		shade = (ks >= low) & (ks <= up)
 		ax3.fill_between(ks[shade],kd[shade],facecolor=colors[ii],interpolate=True,alpha=alpha)
 		midx = np.argmin(abs(ks-nlam))
 		ax3.plot((nlam,nlam),(0,kd[midx]),'k-',zorder=1)        
@@ -86,6 +119,10 @@ def plotKDE(results,colors=[],qs=[16,84],
 		ax3.plot((low,low),(0,kd[lidx]),'k--',zorder=1)
 		uidx = np.argmin(abs(ks-up))
 		ax3.plot((up,up),(0,kd[uidx]),'k--',zorder=1)
+		xmin, xmax = min(marr[:,0]), max(marr[:,0])
+		xmin3, xmax3 = min(lowerBounds)-10,max(upperBounds)+10
+		# xmin3, xmax3 = kd[midx]-kd[lidx]*4, kd[midx]+kd[uidx]*4
+		# print(kd[midx]-kd[lidx]*2, kd[midx]+kd[uidx]*2)
 		
 	ax1.set_ylabel(r'$\rm RV \ (m/s)$',fontsize=font)
 	ax1.set_xlabel(r'$\rm Hours \ from \ midtransit$',fontsize=font)
@@ -100,7 +137,7 @@ def plotKDE(results,colors=[],qs=[16,84],
 
 	ax1.set_xlim(xmin,xmax)
 	ax3.set_ylim(0,1.1)
-	ax3.set_xlim(min(lowerBounds)-5,max(upperBounds)+5)
+	ax3.set_xlim(xmin3,xmax3)
 	ax1.legend()
 	plt.setp(ax2.get_xticklabels(), visible=False)
 	plt.subplots_adjust(hspace=0.08)

@@ -54,11 +54,11 @@ CSV file should have a format like this with column names corresponding to the p
 import rmcmc
 
 ## Path to CSV file
-file = '/home/emil/Desktop/PhD/targets/warm.csv'
+file = './warm.csv'
 ## Instantiate target
 target = rmcmc.target.Target()
 ## Grab and set parameters for your planet name in CSV file
-target.fromCSV(file,'TOI-677b',skiprows=2)
+target.fromCSV(file,'TOI-677b',skiprows=0)
 
 ## Instantiate the Simulator with 400 draws, precision of 5 m/s, and 3 CPUs (multiprocessing)
 run = rmcmc.fakit.Simulator(target,ndraws=400,precision=5,nproc=3)
@@ -97,7 +97,7 @@ import rmcmc
 import os
 
 ## Path to CSV file
-file = '/home/emil/Desktop/PhD/targets/1deg.csv'
+file = './targets.csv'
 ## Instantiate target
 target = rmcmc.target.Target()
 ## Grab and set parameters for your planet name in CSV file
@@ -108,13 +108,13 @@ try:
 except FileExistsError:
 	pass
 
-target.fromCSV(file,name,skiprows=2)
+target.fromCSV(file,name,skiprows=0)
 
 ## Read file with target, exposure time, precision, and jitter
-obsfile = pd.read_csv('targets_exposure.csv',skiprows=1)
+obsfile = pd.read_csv('./targets_exposure.csv',skiprows=0)
 df = obsfile[obsfile['name'] == name]
-prec, jitt = df['precision'][0], df['jitter'][0]
-exp = df['exp'][0]
+prec, jitt = df['precision'].values[0], df['jitter'].values[0]
+exp = df['exp'].values[0]
 ## Instantiate the Simulator with 400 draws, precision of prec m/s, jitter of jitt m/s, and 3 CPUs (multiprocessing)
 run = rmcmc.fakit.Simulator(target,ndraws=400,precision=prec,jitter=jitt,nproc=3)
 
