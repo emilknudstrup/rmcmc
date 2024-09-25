@@ -4,11 +4,12 @@ import numpy as np
 import subprocess
 import itertools
 import os
+import scipy.optimize as so
 
 # =============================================================================
 # Keplerian motion 
 # =============================================================================
-def solveKeplersEq(mean_anomaly, ecc, tolerance=1.e-5):
+def solveKeplersEq(mean_anomaly, ecc, tolerance=1.e-5,sci=True):
 	'''Solves Kepler's equation.
 
 	Function that solves Kepler's equation:
@@ -24,26 +25,36 @@ def solveKeplersEq(mean_anomaly, ecc, tolerance=1.e-5):
 	:type ecc: float
 	:param tolerance: The tolerance for convergene. Defaults to 1.e-5.
 	:type tolerance: float, optional
+	:param sci: Whether to use scipy to solve Kepler's Eq. More stable. Default ``True''.
+	:type sci: bool, optional
 
 	:return: The new eccentric anomaly.
 	:rtype: array 
 
 
 	'''
+
 	## Circular orbit
-	if ecc == 0: return mean_anomaly 
+	if ecc == 0: return mean_anomaly
 
-	new_ecc_anomaly = mean_anomaly
-	converged = False
+	## Elliptical orbit
+	if sci:
+		gE = lambda E: E - ecc*np.sin(E) - mean_anomaly
+		gpE = lambda E: 1.0 - ecc*np.cos(E)
+		gppE = lambda E: ecc*np.sin(E)
+		new_ecc_anomaly, r, _ = so.newton(gE, mean_anomaly, fprime=gpE, fprime2=gppE, tol=tolerance, maxiter=iter_max, full_output=True)
+		converged = all(r)
+	else:
+		new_ecc_anomaly = mean_anomaly
+		converged = False
 
-	for ii in range(300):
-		old_ecc_anomaly = new_ecc_anomaly
+		for ii in range(iter_max):
+			old_ecc_anomaly = new_ecc_anomaly
+			new_ecc_anomaly = old_ecc_anomaly - (old_ecc_anomaly - ecc*np.sin(old_ecc_anomaly) - mean_anomaly)/(1.0 - ecc*np.cos(old_ecc_anomaly))
 
-		new_ecc_anomaly = old_ecc_anomaly - (old_ecc_anomaly - ecc*np.sin(old_ecc_anomaly) - mean_anomaly)/(1.0 - ecc*np.cos(old_ecc_anomaly))
-
-		if np.max(np.abs(new_ecc_anomaly - old_ecc_anomaly)/old_ecc_anomaly) < tolerance:
-			converged = True
-			break
+			if np.max(np.abs(new_ecc_anomaly - old_ecc_anomaly)/old_ecc_anomaly) < tolerance:
+				converged = True
+				break
 
 	if not converged:
 		print('Calculation of the eccentric anomaly did not converge!')
