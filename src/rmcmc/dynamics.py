@@ -4,6 +4,7 @@ import numpy as np
 import subprocess
 import itertools
 import os
+import platform
 import scipy.optimize as so
 
 # =============================================================================
@@ -198,7 +199,7 @@ def xyPos(cos_f,sin_f,ecc,ww,ar,inc,lam):
 # =============================================================================
 # Rossiter-McLaughlin effect 
 # =============================================================================
-def getRM(cos_f,sin_f,ww,ecc,ar,inc,rp,c1,c2,lam,vsini,
+def getRM_Linux(cos_f,sin_f,ww,ecc,ar,inc,rp,c1,c2,lam,vsini,
 	xi=3.,gamma=1.,zeta=1.0,alpha=0.,cos_is=0.0,
 	mpath='.'):
 	'''The Rossiter-McLaughlin effect
@@ -279,6 +280,24 @@ def getRM(cos_f,sin_f,ww,ecc,ar,inc,rp,c1,c2,lam,vsini,
 
 	return RM
 
+def getRM(times,ecc,omega,vsini,lam,c1,c2,T0,ar,b,rp,per,K=0,gamma=0,mpath='.'):
+
+	ecos = np.sqrt(ecc)*np.cos(omega)
+	esin = np.sqrt(ecc)*np.sin(omega)
+	nt = len(times)
+
+	pars = [K,ecos,esin,vsini*1e3,lam,c1,c2,gamma,T0,ar,b,rp,per,nt]
+
+	run_input = [mpath+'/return_RM']
+	for par in pars: run_input.append(str(par))
+	for time in times: run_input.append(str(time))
+
+	RM = subprocess.check_output(run_input)
+	RM = RM.decode()
+	RM = [float(k) for k in RM.split()[2::3]]
+	
+	return RM
+
 # =============================================================================
 # Radial velocity curve 
 # =============================================================================
@@ -315,13 +334,18 @@ def getRV(time, per, T0, ecc, w, K, RVsys,
 	cos_f, sin_f = trueAnomaly(time,T0,ecc,per,w)
 	## Radial velocity
 	vr = K*(np.cos(w)*(ecc + cos_f) - np.sin(w)*sin_f)
-	
+
+
 
 	if RM:
+		is_linux = platform.system() == "Linux"
+
 		inc = np.arccos(b/a)
 		#inc = np.pi/180.
 		## Convert angle from degree to radians
-		lam = np.deg2rad(lam)
+		if type(lam) == np.ndarray:
+			lam = lam[0]
+		# lam = np.deg2rad(lam)
 
 		## Separation       
 		sep = projDist(cos_f,sin_f,w,inc,a,ecc)
@@ -335,16 +359,25 @@ def getRV(time, per, T0, ecc, w, K, RVsys,
 
 		if not mpath:
 			mpath = os.path.abspath(os.path.dirname(__file__))
+			## path to this script
+			# mpath = os.path.dirname(__file__)
 
 		if len(idxs) == 0:
 			pass 
 		elif len(idxs) == 1:
-			cos_f, sin_f = np.array(cos_f[idx]), np.array(sin_f[idx])
-			RMs = getRM(cos_f,sin_f,w,ecc,a,inc,Rp,c1,c2,lam,vsini,xi=xi,zeta=zeta,mpath=mpath)
+			if is_linux:
+				cos_f, sin_f = np.array(cos_f[idx]), np.array(sin_f[idx])
+				RMs = getRM_Linux(cos_f,sin_f,w,ecc,a,inc,Rp,c1,c2, np.deg2rad(lam),vsini,xi=xi,zeta=zeta,mpath=mpath)
+			else:
+				RMs = getRM([time[idx]],ecc,np.rad2deg(w),vsini,lam,c1,c2,T0,a,b,Rp,per,K=0,gamma=0,mpath=mpath)
 			idx = idxs[0]
 			vr[idx] = vr[idx] + RMs
 		else:
-			RMs = getRM(cos_f,sin_f,w,ecc,a,inc,Rp,c1,c2,lam,vsini,xi=xi,zeta=zeta,mpath=mpath)
+			if is_linux:
+				RMs = getRM_Linux(cos_f,sin_f,w,ecc,a,inc,Rp,c1,c2, np.deg2rad(lam),vsini,xi=xi,zeta=zeta,mpath=mpath)
+			else:
+				RMs = getRM(time,ecc,np.rad2deg(w),vsini,lam,c1,c2,T0,a,b,Rp,per,K=0,gamma=0,mpath=mpath)
+
 			for idx in idxs: 
 				vr[idx] = vr[idx] + RMs[idx]
 

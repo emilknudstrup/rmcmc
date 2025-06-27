@@ -222,6 +222,7 @@ class Simulator(object):
 		self.uncertainty = np.sqrt(self.precision**2 + self.jitter**2)
 		self.variables = variables
 		self.nproc = nproc
+		self.combined = False
 
 
 	#def model(self,target,RM=True,mpath=None,mtimes=np.array([])):
@@ -296,7 +297,37 @@ class Simulator(object):
 		
 		self.rvs = rvs
 		
-	
+	def combineData(self,times=[],errors=[],labels=[]):
+		assert len(times) == len(labels), print('Timestamps from different telescopes have to match the labels')
+		self.combined = True
+		
+		self.data = {}
+		ts = np.array([])
+		es = np.array([])
+		for ii, label in enumerate(labels):
+			t = times[ii]
+			e = errors[ii]
+			self.times = t
+			self.error = e
+			rvs = self.model()
+			rvs += self.noiseSimulator()
+
+			arr = np.zeros(shape=(len(t),3))
+			arr[:,0] = time2phase(t,self.target.per,self.target.T0)*self.target.per*24
+			arr[:,1] = rvs
+			arr[:,2] = e
+			self.data[label] = arr
+
+			ts = np.append(ts,t)
+			es = np.append(es,e)
+
+		self.times = ts
+		self.error = es
+		rvs = self.model()
+		rvs += self.noiseSimulator()
+		self.rvs = rvs
+
+
 	def modelSimulator(self):
 		if not len(self.times):
 			self.timeSimulator()
@@ -306,7 +337,14 @@ class Simulator(object):
 		# xmax = xval
 		# self.mtimes = np.linspace(xmin-0.005,xmax+0.006,300)
 		# self.mtimes = np.linspace(min(self.times)-0.005,max(self.times)+0.006,300)
-		self.mtimes = np.linspace(min(self.times)-0.01,max(self.times)+0.006,300)
+		p, rp, ar, b, ecc, ww = self.target.per, self.target.rp, self.target.a, self.target.b, self.target.ecc, self.target.w
+		#inc *= np.pi/180.0
+		inc = np.arccos(b/ar)
+		ww = np.deg2rad(ww)
+		dur = totalDuration(p,rp,ar,inc,ecc,ww)
+
+		self.mtimes = np.linspace(self.target.T0-dur/2-1/24,self.target.T0+dur/2+1/24,300)
+		# self.mtimes = np.linspace(min(self.times)-0.01,max(self.times)+0.006,300)
 		self.mRVs = self.model(mtimes=self.mtimes)
 	
 
@@ -345,10 +383,16 @@ class Simulator(object):
 		#rvs += self.noiseSimulator()
 		
 		#chi2 = (rvs - self.simulated)**2/self.precision**2
-		chi2 = (rvs - self.simulated)**2/self.precision**2
-		den = np.log(1./(np.sqrt(2*np.pi)*self.precision))
+		# chi2 = (rvs - self.simulated)**2/self.precision**2
+		chi2 = (rvs - self.simulated)**2/self.error**2
+		den = np.log(np.sqrt(2*np.pi)*self.error)
+		# den = np.log(1./(np.sqrt(2*np.pi)*self.error))
+		# den = np.log(1./(np.sqrt(2*np.pi)*self.precision))
 		nom = -0.5*chi2
 		loglike = np.sum(nom + den)
+		# print(-1*loglike,lam)
+		# print(np.sum(chi2),lam)
+		# return np.sum(chi2)#
 		return -1*loglike#np.sum(chi2)#
 	
 	def flatPriorDis(self,r,x1,x2):
@@ -375,12 +419,15 @@ class Simulator(object):
 		'''
 		#self.target.lam = lam
 		self.simulated = self.model() + self.noiseSimulator()
+		# print(self.model())
 		#func = lambda ll : self.logLike(ll,per,T0,ecc,w,K,RVsys,a,Rp,b,vsini,c1,c2,zeta,xi,RM=RM,mpath=mpath)
 		guess = self.flatPriorDis(np.random.uniform(),lam-50.,lam+50.)
 		#res = sop.minimize(func,guess,method='Nelder-Mead',tol=1e-6,bounds=[(-180,180)])
 		# res = sop.minimize(self.logLike,guess,method='L-BFGS-B',tol=1e-6,bounds=[(-180,180)],
 		res = sop.minimize(self.logLike,guess,method='Nelder-Mead',tol=1e-6,bounds=[(-180,180)],
 			args=(per,T0,ecc,w,K,RVsys,a,Rp,b,vsini,c1,c2,zeta,xi,RM,mpath))
+		# print(guess,res.x)
+
 		return res.x
 
 
@@ -416,22 +463,27 @@ class Simulator(object):
 				for ii, run in enumerate(self.runs):
 					self.sols[ii] = self.calculateLambda(*run)        
 			
-			self.dataSimulator()
-			arr = np.zeros(shape=(len(self.times),3))
-			arr[:,0] = time2phase(self.times,self.target.per,self.target.T0)*self.target.per*24
-			arr[:,1] = self.rvs
-			arr[:,2] = self.error
+			if self.combined:
+				arr = self.data
+			else:
+				self.dataSimulator()
+				arr = np.zeros(shape=(len(self.times),3))
+				arr[:,0] = time2phase(self.times,self.target.per,self.target.T0)*self.target.per*24
+				arr[:,1] = self.rvs
+				arr[:,2] = self.error
 			
 			self.modelSimulator()
 			marr = np.zeros(shape=(len(self.mtimes),2))
 			marr[:,0] = time2phase(self.mtimes,self.target.per,self.target.T0)*self.target.per*24
 			marr[:,1] = self.mRVs
 			
+				
 			self.results[lam] = {
 				'distribution':self.sols,
 				'observations':arr,
 				'model':marr,
 				'subtract':self.model(),
+				'combined': self.combined
 			}            
 	
 		## write results to binary file

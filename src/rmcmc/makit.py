@@ -7,10 +7,15 @@ import matplotlib.pyplot as plt
 from statsmodels.nonparametric.kde import KDEUnivariate as KDE
 import corner
 
+def gaussian(x, mu, sig):
+	
+	return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+
 ## function to plot a KDE from the distributions
 def plotKDE(results,colors=[],qs=[16,84],
-			font=12,alpha=0.5,path='./name',save=1,
-			usetex=False,figsize=(6.4,4.8),all_kdes=True,
+			font=12,alpha=0.5,path='./name',save=1,shapes=['o','s','^','*'],
+			usetex=False,figsize=(6.4,4.8),all_kdes=True,actual_kde=True,
+			xmin=None,xmax=None,
 			**kwargs):
 	'''Plot a KDE from the distributions.'''
 	if not len(colors):
@@ -57,6 +62,13 @@ def plotKDE(results,colors=[],qs=[16,84],
 		# low = nlam - np.std(sols)
 		# up = nlam + np.std(sols)
 		
+		if not actual_kde:
+			ks = np.linspace(-180,180,1000)
+			kd = gaussian(ks,nlam,std)
+			low = nlam - std
+			up = nlam + std
+
+
 
 		lowerBounds.append(low)
 		upperBounds.append(up)
@@ -70,10 +82,19 @@ def plotKDE(results,colors=[],qs=[16,84],
 		
 		if not ii:
 			arr = ldict['observations']
-			times = arr[:,0]
-			rvs = arr[:,1]
-			errs = arr[:,2]
-			ax1.errorbar(times,rvs,yerr=errs,fmt='.',color='k',zorder=10)
+			if ldict['combined']:
+				labels = arr.keys()
+				for ss, label in enumerate(labels):
+					subarr = arr[label]
+					times = subarr[:,0]
+					rvs = subarr[:,1]
+					errs = subarr[:,2]
+					ax1.errorbar(times,rvs,yerr=errs,fmt=shapes[ss],mec='k',mfc='w',ecolor='k',zorder=10)
+			else:
+				times = arr[:,0]
+				rvs = arr[:,1]
+				errs = arr[:,2]
+				ax1.errorbar(times,rvs,yerr=errs,fmt='.',color='k',zorder=10)
 			# ax1.errorbar(times,rvs,yerr=errs,fmt='o',mec='k',mfc='w',zorder=10)
 			# try:
 			# 	arr2 = ldict['maroon']
@@ -101,9 +122,23 @@ def plotKDE(results,colors=[],qs=[16,84],
 			verticalalignment='center',
 			transform = ax1.transAxes,
 			bbox=dict(boxstyle="round", fc="white", ec="black", pad=0.2),zorder=15) 
-			
+
 		subtract = ldict['subtract']
-		ax2.errorbar(times,rvs-subtract,yerr=errs,fmt='.',color=colors[ii],zorder=10)
+		if ldict['combined']:
+			labels = arr.keys()
+			shapes = ['o','s','^','*']
+			start = 0
+			for ss, label in enumerate(labels):
+				subarr = arr[label]
+				times = subarr[:,0]
+				rvs = subarr[:,1]
+				errs = subarr[:,2]
+				end = len(times)+start
+				sub = subtract[start:end]
+				start = end
+				ax2.errorbar(times,rvs-sub,yerr=errs,fmt=shapes[ss],mec='k',mfc=colors[ii],ecolor=colors[ii],zorder=10)
+		else:
+			ax2.errorbar(times,rvs-subtract,yerr=errs,fmt='.',color=colors[ii],zorder=10)
 		# ax2.errorbar(times,rvs-subtract,yerr=errs,fmt='o',mec='k',mfc=colors[ii],zorder=10)
 		# ax2.errorbar(times[idxs],rvs[idxs]-subtract[idxs],yerr=e2,fmt='s',mec='k',mfc=colors[ii],zorder=10)
 		
@@ -119,8 +154,9 @@ def plotKDE(results,colors=[],qs=[16,84],
 		ax3.plot((low,low),(0,kd[lidx]),'k--',zorder=1)
 		uidx = np.argmin(abs(ks-up))
 		ax3.plot((up,up),(0,kd[uidx]),'k--',zorder=1)
-		xmin, xmax = min(marr[:,0]), max(marr[:,0])
-		xmin3, xmax3 = min(lowerBounds)-10,max(upperBounds)+10
+		xmin = min(marr[:,0])
+		xmax = max(marr[:,0])
+		xmin3, xmax3 = min(lowerBounds)-2.5*std,max(upperBounds)+2.5*std
 		# xmin3, xmax3 = kd[midx]-kd[lidx]*4, kd[midx]+kd[uidx]*4
 		# print(kd[midx]-kd[lidx]*2, kd[midx]+kd[uidx]*2)
 		
